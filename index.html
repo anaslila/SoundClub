@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoundClub - Free Music Platform</title>
+  <link rel="icon" type="image/png" href="https://i.postimg.cc/0NM7YrKT/Sound.png" />
+  <link rel="apple-touch-icon" href="https://i.postimg.cc/0NM7YrKT/Sound.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <img src="https://i.postimg.cc/hPs8gkq2/image.png" alt="SoundClub Logo" class="logo-img" />
+    </div>
+    <div class="header-center">
+      <div class="search-anim-box" id="searchAnimBox">
+        <span class="search-placeholder" id="searchPlaceholder">Search</span>
+        <form id="searchForm" class="search-form" autocomplete="off">
+          <input
+            type="search"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search songs, artists, albums..."
+            aria-label="Search"
+            />
+          <button type="button" class="clear-btn" id="clearBtn" title="Clear Search">
+            <img src="https://i.postimg.cc/1zbzGp88/image.png" alt="Clear" />
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="header-right" id="userBox">
+      <button class="header-link" id="login-btn">Login</button>
+      <button class="header-link" id="signup-btn">Sign Up</button>
+      <button class="header-link upload-link" id="upload-btn">
+        <img src="https://cdn-icons-png.flaticon.com/128/10811/10811965.png" alt="Register" class="btn-icon" />
+        Register a New Song
+      </button>
+    </div>
+    <div class="header-right hidden" id="profileBox">
+      <button class="header-link upload-link" id="upload-btn-logged">
+        <img src="https://cdn-icons-png.flaticon.com/128/10811/10811965.png" alt="Register" class="btn-icon" />
+        Register a New Song
+      </button>
+      <img src="https://i.postimg.cc/zXy2fwJZ/image.png" alt="Profile" class="profile-icon" id="profileIcon" />
+      <span id="profileName">Username</span>
+      <button class="header-link logout-link" id="logout-btn" title="Logout">
+        <img src="https://cdn-icons-png.flaticon.com/128/4400/4400629.png" alt="Logout" class="btn-icon" />
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <nav>
+      <ul>
+        <li class="active" id="nav-home">
+          <img src="https://cdn-icons-png.flaticon.com/128/1828/1828791.png" alt="Dashboard" class="nav-icon" />
+          <span>Dashboard</span>
+        </li>
+        <li id="nav-library">
+          <img src="https://cdn-icons-png.flaticon.com/128/17009/17009106.png" alt="Library" class="nav-icon" />
+          <span>Library</span>
+        </li>
+        <li id="nav-playlists">
+          <img src="https://cdn-icons-png.flaticon.com/128/4043/4043797.png" alt="My Playlists" class="nav-icon" />
+          <span>My Playlists</span>
+        </li>
+        <li id="nav-uploads">
+          <img src="https://cdn-icons-png.flaticon.com/128/159/159626.png" alt="My Uploads" class="nav-icon" />
+          <span>My Uploads</span>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main id="main-content">
+    <section id="dashboard">
+      <h2>Trending Now</h2>
+      <div class="cards-row" id="dashboard-songs">
+        <!-- Songs will be dynamically loaded here -->
+      </div>
+    </section>
+  </main>
+
+  <!-- LOGIN MODAL -->
+  <div class="modal" id="login-modal">
+    <div class="modal-content">
+      <button class="modal-close" data-modal="login-modal" title="Close">&times;</button>
+      <h2>Login</h2>
+      <form id="login-form" autocomplete="off">
+        <label>Email<br/>
+          <input type="email" name="email" required>
+        </label>
+        <label>Password<br/>
+          <input type="password" name="password" required>
+        </label>
+        <button type="submit" class="submit-btn">Login</button>
+      </form>
+      <p class="modal-link">Not a member? <a href="#" id="show-signup">Sign up</a></p>
+    </div>
+  </div>
+
+  <!-- SIGNUP MODAL -->
+  <div class="modal" id="signup-modal">
+    <div class="modal-content">
+      <button class="modal-close" data-modal="signup-modal" title="Close">&times;</button>
+      <h2>Sign Up</h2>
+      <form id="signup-form" autocomplete="off">
+        <label>Username<br/>
+          <input type="text" name="username" required>
+        </label>
+        <label>Email<br/>
+          <input type="email" name="email" required>
+        </label>
+        <label>Password<br/>
+          <input type="password" name="password" required>
+        </label>
+        <label>Full Name<br/>
+          <input type="text" name="fullName" required>
+        </label>
+        <label>Contact Number<br/>
+          <input type="tel" name="contactNumber" required>
+        </label>
+        <label>Profile Image URL<br/>
+          <input type="url" name="profileImage">
+        </label>
+        <label>Bio<br/>
+          <textarea name="bio" rows="2"></textarea>
+        </label>
+        <label>Location<br/>
+          <input type="text" name="location">
+        </label>
+        <button type="submit" class="submit-btn">Create Account</button>
+      </form>
+      <p class="modal-link">Already a member? <a href="#" id="show-login">Login</a></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
