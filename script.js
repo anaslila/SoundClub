@@ -6,6 +6,27 @@ function setUserSession(user) { localStorage.setItem('sc_user', JSON.stringify(u
 function getUserSession() { try { return JSON.parse(localStorage.getItem('sc_user')); } catch { return null; } }
 function clearUserSession() { localStorage.removeItem('sc_user'); }
 
+// ---- MUSIC PLAYER STATE ----
+let currentSong = null;
+let playlist = [];
+let currentIndex = 0;
+let isYouTube = false;
+let ytPlayer = null;
+let ytCheckInterval = null;
+
+const audioPlayer = document.getElementById('audioPlayer');
+const musicPlayer = document.getElementById('musicPlayer');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const playIcon = document.getElementById('playIcon');
+const pauseIcon = document.getElementById('pauseIcon');
+const progressBar = document.getElementById('progressBar');
+const currentTimeEl = document.getElementById('currentTime');
+const totalTimeEl = document.getElementById('totalTime');
+const volumeSlider = document.getElementById('volumeSlider');
+const playerTitle = document.getElementById('playerTitle');
+const playerArtist = document.getElementById('playerArtist');
+const playerArtwork = document.getElementById('playerArtwork');
+
 // ---- HEADER PROFILE DISPLAY ----
 function renderHeaderUser() {
   const user = getUserSession();
@@ -185,6 +206,205 @@ document.getElementById('signup-form').addEventListener('submit', function (e) {
     }).catch(() => alert("Network/server error."));
 });
 
+// ---- YOUTUBE HELPERS ----
+function getYouTubeVideoId(url) {
+  const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[7].length === 11) ? match[7] : null;
+}
+
+function createYouTubePlayer(videoId) {
+  if (!document.getElementById('yt-player-container')) {
+    const container = document.createElement('div');
+    container.id = 'yt-player-container';
+    container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(container);
+  }
+  
+  if (typeof YT === 'undefined' || !YT.Player) {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    
+    window.onYouTubeIframeAPIReady = function() {
+      initYTPlayer(videoId);
+    };
+  } else {
+    initYTPlayer(videoId);
+  }
+}
+
+function initYTPlayer(videoId) {
+  if (ytPlayer) {
+    ytPlayer.loadVideoById(videoId);
+    ytPlayer.playVideo();
+  } else {
+    ytPlayer = new YT.Player('yt-player-container', {
+      height: '1',
+      width: '1',
+      videoId: videoId,
+      playerVars: { 'autoplay': 1, 'controls': 0 },
+      events: {
+        'onReady': (e) => {
+          e.target.playVideo();
+          startYTProgressCheck();
+        },
+        'onStateChange': (e) => {
+          if (e.data === YT.PlayerState.PLAYING) {
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+          } else if (e.data === YT.PlayerState.PAUSED) {
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+          } else if (e.data === YT.PlayerState.ENDED) {
+            playNext();
+          }
+        }
+      }
+    });
+  }
+}
+
+function startYTProgressCheck() {
+  if (ytCheckInterval) clearInterval(ytCheckInterval);
+  ytCheckInterval = setInterval(() => {
+    if (ytPlayer && ytPlayer.getCurrentTime) {
+      const current = ytPlayer.getCurrentTime();
+      const duration = ytPlayer.getDuration();
+      if (duration > 0) {
+        const progress = (current / duration) * 100;
+        progressBar.value = progress;
+        currentTimeEl.textContent = formatTime(current);
+        totalTimeEl.textContent = formatTime(duration);
+      }
+    }
+  }, 500);
+}
+
+// ---- MUSIC PLAYER FUNCTIONS ----
+function playSong(song) {
+  currentSong = song;
+  const songLink = song.songLink;
+  const title = song.title;
+  const artist = song.artist;
+  const artwork = song.artwork;
+  
+  // Update player UI
+  playerTitle.textContent = title;
+  playerArtist.textContent = artist;
+  playerArtwork.src = artwork;
+  musicPlayer.classList.remove('hidden');
+  
+  // Stop any existing playback
+  if (ytPlayer && isYouTube) {
+    ytPlayer.pauseVideo();
+    if (ytCheckInterval) clearInterval(ytCheckInterval);
+  }
+  audioPlayer.pause();
+  
+  // Check if YouTube link
+  if (songLink.includes('youtube.com') || songLink.includes('youtu.be')) {
+    isYouTube = true;
+    const videoId = getYouTubeVideoId(songLink);
+    if (videoId) {
+      createYouTubePlayer(videoId);
+    } else {
+      alert('Invalid YouTube link');
+    }
+  } else {
+    // Play direct audio link
+    isYouTube = false;
+    audioPlayer.src = songLink;
+    audioPlayer.load();
+    audioPlayer.play().then(() => {
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    }).catch(err => {
+      console.error('Audio playback error:', err);
+      alert('Unable to play this song. Please check the song link.');
+    });
+  }
+}
+
+function togglePlayPause() {
+  if (!currentSong) return;
+  
+  if (isYouTube && ytPlayer) {
+    if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+      ytPlayer.pauseVideo();
+    } else {
+      ytPlayer.playVideo();
+    }
+  } else {
+    if (audioPlayer.paused) {
+      audioPlayer.play();
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    } else {
+      audioPlayer.pause();
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    }
+  }
+}
+
+function playNext() {
+  if (playlist.length === 0) return;
+  currentIndex = (currentIndex + 1) % playlist.length;
+  playSong(playlist[currentIndex]);
+}
+
+function playPrev() {
+  if (playlist.length === 0) return;
+  currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+  playSong(playlist[currentIndex]);
+}
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// ---- PLAYER EVENT LISTENERS ----
+playPauseBtn.addEventListener('click', togglePlayPause);
+document.getElementById('nextBtn').addEventListener('click', playNext);
+document.getElementById('prevBtn').addEventListener('click', playPrev);
+
+audioPlayer.addEventListener('timeupdate', function() {
+  if (!isYouTube && audioPlayer.duration) {
+    const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+    progressBar.value = progress;
+    currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+    totalTimeEl.textContent = formatTime(audioPlayer.duration);
+  }
+});
+
+progressBar.addEventListener('input', function() {
+  if (isYouTube && ytPlayer) {
+    const duration = ytPlayer.getDuration();
+    const seekTime = (progressBar.value / 100) * duration;
+    ytPlayer.seekTo(seekTime);
+  } else {
+    const seekTime = (progressBar.value / 100) * audioPlayer.duration;
+    audioPlayer.currentTime = seekTime;
+  }
+});
+
+volumeSlider.addEventListener('input', function() {
+  const vol = volumeSlider.value;
+  if (isYouTube && ytPlayer && ytPlayer.setVolume) {
+    ytPlayer.setVolume(vol);
+  } else {
+    audioPlayer.volume = vol / 100;
+  }
+});
+
+audioPlayer.addEventListener('ended', playNext);
+
+// Set initial volume
+audioPlayer.volume = 0.7;
+
 // ---- LOAD DASHBOARD (show user's uploads) ----
 function loadDashboard() {
   const user = getUserSession();
@@ -201,6 +421,12 @@ function loadDashboard() {
   getFromBackend({ action: 'getLibrary', userId: user.userId })
     .then(res => {
       if (res.success && res.songs && res.songs.length > 0) {
+        playlist = res.songs.map(song => ({
+          title: song[2] || 'Untitled',
+          artist: song[3] || 'Unknown Artist',
+          artwork: song[26] || 'https://via.placeholder.com/160',
+          songLink: song[27] || '#'
+        }));
         renderSongs(res.songs, 'Trending Now');
       } else {
         document.getElementById('main-content').innerHTML = `
@@ -231,6 +457,12 @@ function loadMyUploads() {
   getFromBackend({ action: 'getLibrary', userId: user.userId })
     .then(res => {
       if (res.success && res.songs && res.songs.length > 0) {
+        playlist = res.songs.map(song => ({
+          title: song[2] || 'Untitled',
+          artist: song[3] || 'Unknown Artist',
+          artwork: song[26] || 'https://via.placeholder.com/160',
+          songLink: song[27] || '#'
+        }));
         renderSongs(res.songs, 'My Uploads');
       } else {
         document.getElementById('main-content').innerHTML = `
@@ -253,14 +485,13 @@ function loadMyUploads() {
 // ---- RENDER SONGS ----
 function renderSongs(songs, title) {
   let html = `<section id="dashboard"><h2>${title}</h2><div class="cards-row" id="dashboard-songs">`;
-  songs.forEach(song => {
+  songs.forEach((song, index) => {
     const songTitle = song[2] || 'Untitled';
     const artist = song[3] || 'Unknown Artist';
     const artwork = song[26] || 'https://via.placeholder.com/160';
-    const songLink = song[27] || '#';
     
     html += `
-      <div class="music-card" onclick="window.open('${songLink}', '_blank')">
+      <div class="music-card" data-index="${index}">
         <img src="${artwork}" alt="${songTitle}" onerror="this.src='https://via.placeholder.com/160'" />
         <div class="music-card-info">
           <p class="music-card-title">${songTitle}</p>
@@ -271,6 +502,15 @@ function renderSongs(songs, title) {
   });
   html += `</div></section>`;
   document.getElementById('main-content').innerHTML = html;
+  
+  // Add click listeners to play songs
+  document.querySelectorAll('.music-card').forEach(card => {
+    card.addEventListener('click', function() {
+      const index = parseInt(this.dataset.index);
+      currentIndex = index;
+      playSong(playlist[index]);
+    });
+  });
 }
 
 // ---- LOAD LIBRARY (placeholder) ----
@@ -344,7 +584,7 @@ function showRegistrationPage() {
             <label>Duration (seconds)<input type="number" name="duration" /></label>
             <label>Explicit Content?<select name="explicit"><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></label>
             <label>Artwork URL *<input type="url" name="artworkUrl" required /></label>
-            <label>Song Link (URL) *<input type="url" name="songLink" required /></label>
+            <label>Song Link (YouTube or Direct Audio) *<input type="url" name="songLink" required placeholder="YouTube or direct MP3/audio link" /></label>
             <label>Lyrics<textarea name="lyrics" rows="3"></textarea></label>
             <label>Description<textarea name="description" rows="2"></textarea></label>
             <label>Location (Origin)<input type="text" name="location" /></label>
